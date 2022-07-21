@@ -1,5 +1,8 @@
 using CorporateTutorialManagement.Models;
+using CorporateTutorialManagement.TokenManager;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,10 +20,26 @@ builder.Services.AddDbContext<corporatetutorialmanagementContext>(options =>
     object value = options.UseMySql(connectionString, serverVersion);
 }); ;
 
+builder.Services.AddSingleton<IJWTTokenManager, JWTTokenManager>();
+
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddAuthentication()
+    .AddJwtBearer(options =>
+    {
+        var key = Encoding.UTF8.GetBytes(builder.Configuration["JWT:key"]);
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["JWT:Issuer"],
+            IssuerSigningKey = new SymmetricSecurityKey(key)
+        };
+    }
+    );
 
 var app = builder.Build();
 

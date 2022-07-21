@@ -1,41 +1,54 @@
 ﻿
 using CorporateTutorialManagement.Models;
+using CorporateTutorialManagement.TokenManager;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace CorporateTutorialManagement.Controllers
 {
-    [ApiController]
-    [Route("[controller]")]
+   
     public class LoginController : Controller
     {
 
-        private readonly corporatetutorialmanagementContext _context;
 
-        public LoginController(corporatetutorialmanagementContext context)
+        private readonly corporatetutorialmanagementContext _context;
+        private readonly IJWTTokenManager _configuration;
+
+        public LoginController(corporatetutorialmanagementContext context, IJWTTokenManager configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
 
+       
+      
 
         [HttpPost]
         [Route("login")]
-        public async Task <ActionResult<User>> login(Login user)
+        public async Task <ActionResult<User>> login([FromBody]Login user)
         {
-            var users = await _context.Users.FirstOrDefaultAsync(e=>e.EmailId==user.EmailId);
-            if (user != null)
+            var users = await _context.Users.FirstOrDefaultAsync(x => x.EmailId == user.EmailId && x.Password == user.Password);
+            if (users != null)
             {
-                return Ok(users);
+                var token = _configuration.Authenticate(user.EmailId);
+                return Ok(token);
             }
             else
             {
-                return NotFound("user not found");
+                return BadRequest("user not found");
             }
-            //var userData = new List<User>();
-            //using (var context = new corporatetutorialmanagementContext())
-            //{
-            //    userData = await context.Users.FindAsync(user);
-            //}
+            
         }
+
+        [Authorize]
+        [HttpGet]
+        [Route("check")]
+        public String Signout()
+        {
+            return "authenticated"; 
+        }
+
+
     }
 }
